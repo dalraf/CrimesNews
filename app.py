@@ -25,28 +25,24 @@ def municipio_string_format(var):
 
 
 def remove_tags(html):
-    soup = BeautifulSoup(html, "html.parser").find("main")
-    if soup is not None:
-        for data in soup(["style", "script"]):
-            data.decompose()
-        return " ".join(soup.stripped_strings)
-    else:
-        return ""
-
+  try:
+    soup = BeautifulSoup(html, "html.parser")
+    for data in soup(["style", "script"]):
+          data.decompose()
+    return " ".join(soup.stripped_strings)
+  except Exception as e:
+    print('Erro de análise de html', e.args[0])
+    return ''
 
 def get_text_url(url):
+  try:
     page = requests.get(url, timeout=5)
-    if page.content is not None:
-        return remove_tags(page.content)
-    else:
-        return ""
-
-
-def remove_tags(html):
-    soup = BeautifulSoup(html, "html.parser").find("main")
-    for data in soup(["style", "script"]):
-        data.decompose()
-    return " ".join(soup.stripped_strings)
+  except Exception as e:
+    print('Erro de busca dos dados do site', e.args[0])
+  if page.content is not None or '':
+      return remove_tags(page.content)
+  else:
+      return ""
 
 
 dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
@@ -79,3 +75,5 @@ for news in lista_noticias:
             departamento = row[1]["Departamento"]
             lista_output.append([municipio, regional, departamento, titulo, link])
 dados_crimes = pd.DataFrame(lista_output, columns=colunas)
+
+print(dados_crimes)
