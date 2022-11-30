@@ -54,8 +54,7 @@ def executar():
     dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
         lambda x: municipio_string_format(x)
     )
-    "delegado,chefe de polícia,chefe de departamento,delegado regional,investigador,escrivão,perito,perícia,médico legista,médico legal,IML,homicídio,feminicídio,roubo,tráfico,lavagem de dinheiro,receptação,furto,arma de fogo,ameaça,ameaçar,ameaçou,foragido"
-    lista_parametros_pesquisa = texto_parametros_pesquisa.split(",")
+    
     lista_noticias = []
     for pesquisa in lista_parametros_pesquisa:
         pesquisa_url = urllib.parse.quote_plus(pesquisa)
