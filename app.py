@@ -38,13 +38,13 @@ def remove_tags(html):
 def get_text_url(url):
   try:
     page = requests.get(url, timeout=5)
+    return remove_tags(page.content)
   except Exception as e:
     print('Erro de busca dos dados do site', e.args[0])
-  if page.content is not None or '':
-      return remove_tags(page.content)
-  else:
-      return ""
+    return ""
 
+def convert_df(df):
+   return df.to_csv(index=False).encode('utf-8')
 
 def executar():
 
@@ -80,7 +80,16 @@ def executar():
   dados_crimes = pd.DataFrame(lista_output, columns=colunas)
   return(dados_crimes)
 
+st.title('Análise de crimes')
 
 if st.button('Executar'):
   df = executar()
   st.dataframe(df)
+  csv = convert_df(df)
+  st.download_button(
+    "Fazer download",
+    csv,
+    "crimes.csv",
+    "text/csv",
+    key='download-csv'
+  )
