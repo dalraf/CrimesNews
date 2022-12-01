@@ -54,7 +54,7 @@ def executar():
     dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
         lambda x: municipio_string_format(x)
     )
-    
+
     lista_noticias = []
     for pesquisa in lista_parametros_pesquisa:
         pesquisa_url = urllib.parse.quote_plus(pesquisa)
@@ -82,6 +82,8 @@ def executar():
     return dados_crimes
 
 
+st.set_page_config(layout="wide")
+
 st.title("Análise de crimes")
 
 lista_parametros_pesquisa_default = [
@@ -108,20 +110,42 @@ lista_parametros_pesquisa_default = [
     "foragido",
 ]
 
-lista_parametros_pesquisa = st.multiselect(
-    "Parâmetros de pesquisa:",
-    options=lista_parametros_pesquisa_default,
-    default=lista_parametros_pesquisa_default,
-)
+col1, col2 = st.columns(2)
 
-noticias_maximo_retornado  = st.number_input('Numero de notícias a serem retornadas',value=10)
+with col1:
+
+    lista_parametros_pesquisa = st.multiselect(
+        "Parâmetros de pesquisa:",
+        options=lista_parametros_pesquisa_default,
+        default=lista_parametros_pesquisa_default,
+    )
+
+
+with col2:
+    noticias_maximo_retornado = st.number_input(
+        "Numero de notícias a serem retornadas", value=10
+    )
+
 
 if st.button("Executar"):
-    st.session_state['df'] = executar()
+    st.session_state["df"] = executar()
 
-if 'df' in st.session_state:
-    df = st.session_state['df']
-    st.dataframe(df)
+if "df" in st.session_state:
+    df = st.session_state["df"]
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.markdown('#### Município')
+    col2.markdown('#### Regional')
+    col3.markdown('#### Departamento')
+    col4.markdown('#### Título')
+    col5.markdown('#### Link')
+    for index, row in df.iterrows():
+        with st.container():
+            col1, col2, col3, col4, col5 = st.columns(5)
+            col1.write(row['Município'])
+            col2.write(row['Regional'])
+            col3.write(row['Departamento'])
+            col4.markdown('*%s*' % row['Título'])
+            col5.write("[link](%s)" % row['Links'])
     csv = convert_df(df)
     st.download_button(
         "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
