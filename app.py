@@ -6,6 +6,8 @@ import requests
 import spacy
 import streamlit as st
 
+exec_status = False
+
 nlp = spacy.load("pt_core_news_sm")
 
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
@@ -116,7 +118,8 @@ lista_parametros_pesquisa = st.multiselect(
 
 noticias_maximo_retornado  = st.number_input('Numero de notícias a serem retornadas',value=10)
 
-if st.button("Executar"):
+if st.button("Executar") or exec_status:
+    exec_status = True
     df = executar()
     st.dataframe(df)
     csv = convert_df(df)
