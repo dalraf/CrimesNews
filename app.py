@@ -5,12 +5,14 @@ from bs4 import BeautifulSoup
 import requests
 import spacy
 import streamlit as st
+import concurrent.futures
 
 nlp = spacy.load("pt_core_news_sm")
 
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
 sheet_name = "Pagina1"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+colunas = ["Município", "Regional", "Departamento", "Título", "Links"]
 
 
 def municipio_string_format(var):
@@ -23,12 +25,13 @@ def municipio_string_format(var):
         lista_string.append(word)
     return " ".join(lista_string)
 
+
 if "dados_municipios" in st.session_state:
     dados_municipios = st.session_state["dados_municipios"]
 else:
     dados_municipios = pd.read_csv(url)
     dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
-            lambda x: municipio_string_format(x)
+        lambda x: municipio_string_format(x)
     )
     st.session_state["dados_municipios"] = dados_municipios
 
@@ -57,17 +60,9 @@ def convert_df(df):
     return df.to_csv(index=False).encode("utf-8")
 
 
-def executar():
-
-    lista_noticias = []
-    for pesquisa in lista_parametros_pesquisa:
-        pesquisa_url = urllib.parse.quote_plus(pesquisa)
-        url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
-        lista_noticias += feedparser.parse(url)["entries"][:noticias_maximo_retornado]
-
-    lista_output = []
-    colunas = ["Município", "Regional", "Departamento", "Título", "Links"]
-    for news in lista_noticias:
+def format_news(noticias):
+    lista_formatada = []
+    for news in noticias:
         titulo = news["title"]
         link = news["links"][0]["href"]
         link_text = get_text_url(link)
@@ -81,8 +76,28 @@ def executar():
             if municipio in list_ent_gpe:
                 regional = row[1]["Regional"]
                 departamento = row[1]["Departamento"]
-                lista_output.append([municipio, regional, departamento, titulo, link])
-    dados_crimes = pd.DataFrame(lista_output, columns=colunas)
+                lista_formatada.append(
+                    [municipio, regional, departamento, titulo, link]
+                )
+    return lista_formatada
+
+
+def executar():
+
+    lista_formatada = []
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for pesquisa in lista_parametros_pesquisa:
+            pesquisa_url = urllib.parse.quote_plus(pesquisa)
+            url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
+            noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
+            future = executor.submit(format_news, noticias)
+            futures.append(future)
+
+    for future in futures:
+        lista_formatada += future.result()
+
+    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas)
     return dados_crimes
 
 
@@ -139,19 +154,19 @@ if st.button("Executar"):
 if "df" in st.session_state:
     df = st.session_state["df"]
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.markdown('#### Município')
-    col2.markdown('#### Regional')
-    col3.markdown('#### Departamento')
-    col4.markdown('#### Título')
-    col5.markdown('#### Link')
+    col1.markdown("#### Município")
+    col2.markdown("#### Regional")
+    col3.markdown("#### Departamento")
+    col4.markdown("#### Título")
+    col5.markdown("#### Link")
     for index, row in df.iterrows():
         with st.container():
             col1, col2, col3, col4, col5 = st.columns(5)
-            col1.write(row['Município'])
-            col2.write(row['Regional'])
-            col3.write(row['Departamento'])
-            col4.markdown('*%s*' % row['Título'])
-            col5.write("[link](%s)" % row['Links'])
+            col1.write(row["Município"])
+            col2.write(row["Regional"])
+            col3.write(row["Departamento"])
+            col4.markdown("*%s*" % row["Título"])
+            col5.write("[link](%s)" % row["Links"])
     csv = convert_df(df)
     st.download_button(
         "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
