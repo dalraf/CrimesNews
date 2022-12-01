@@ -60,7 +60,8 @@ def convert_df(df):
     return df.to_csv(index=False).encode("utf-8")
 
 
-def format_news(noticias):
+def format_news(url):
+    noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
     lista_formatada = []
     for news in noticias:
         titulo = news["title"]
@@ -90,8 +91,7 @@ def executar():
         for pesquisa in lista_parametros_pesquisa:
             pesquisa_url = urllib.parse.quote_plus(pesquisa)
             url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
-            noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
-            future = executor.submit(format_news, noticias)
+            future = executor.submit(format_news, url)
             futures.append(future)
 
     for future in futures:
