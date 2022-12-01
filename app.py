@@ -11,7 +11,6 @@ nlp = spacy.load("pt_core_news_sm")
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
 sheet_name = "Pagina1"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-dados_municipios = pd.read_csv(url)
 
 
 def municipio_string_format(var):
@@ -23,6 +22,15 @@ def municipio_string_format(var):
             word = word.capitalize()
         lista_string.append(word)
     return " ".join(lista_string)
+
+if "dados_municipios" in st.session_state:
+    dados_municipios = st.session_state["dados_municipios"]
+else:
+    dados_municipios = pd.read_csv(url)
+    dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
+            lambda x: municipio_string_format(x)
+    )
+    st.session_state["dados_municipios"] = dados_municipios
 
 
 def remove_tags(html):
@@ -50,10 +58,6 @@ def convert_df(df):
 
 
 def executar():
-
-    dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
-        lambda x: municipio_string_format(x)
-    )
 
     lista_noticias = []
     for pesquisa in lista_parametros_pesquisa:
@@ -93,7 +97,8 @@ lista_parametros_pesquisa_default = [
     "delegado regional",
     "investigador",
     "escrivão",
-    "perito,perícia",
+    "perito",
+    "perícia",
     "médico legista",
     "médico legal",
     "IML",
@@ -103,7 +108,8 @@ lista_parametros_pesquisa_default = [
     "tráfico",
     "lavagem de dinheiro",
     "receptação",
-    "furto,arma de fogo",
+    "furto",
+    "arma de fogo",
     "ameaça",
     "ameaçar",
     "ameaçou",
