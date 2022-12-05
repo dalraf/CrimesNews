@@ -6,13 +6,17 @@ import requests
 import spacy
 import streamlit as st
 import concurrent.futures
+from time import mktime
+from datetime import datetime, timezone, timedelta
 
 nlp = spacy.load("pt_core_news_sm")
+
+fusohorario = timedelta(hours=-3)
 
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
 sheet_name = "Pagina1"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-colunas = ["Município", "Regional", "Departamento", "Título", "Links"]
+colunas = ["Data Publicação","Município", "Regional", "Departamento", "Título", "Links"]
 
 
 def municipio_string_format(var):
@@ -65,6 +69,9 @@ else:
         "ameaçou",
         "foragido",
     ]
+    st.session_state[
+        "lista_parametros_pesquisa_default"
+    ] = lista_parametros_pesquisa_default
 
 
 def remove_tags(html):
@@ -96,6 +103,7 @@ def format_news(url):
     lista_formatada = []
     for news in noticias:
         titulo = news["title"]
+        pubdate = datetime.fromtimestamp(mktime(news['published_parsed']), timezone(fusohorario))
         link = news["links"][0]["href"]
         link_text = get_text_url(link)
         doc_link_text = nlp(link_text)
@@ -109,7 +117,7 @@ def format_news(url):
                 regional = row[1]["Regional"]
                 departamento = row[1]["Departamento"]
                 lista_formatada.append(
-                    [municipio, regional, departamento, titulo, link]
+                    [pubdate, municipio, regional, departamento, titulo, link]
                 )
     return lista_formatada
 
@@ -131,57 +139,63 @@ def executar():
     dados_crimes = pd.DataFrame(lista_formatada, columns=colunas)
     return dados_crimes
 
+
 def clear_add_parametro():
-    if st.session_state['parametro_add'] not in st.session_state['lista_parametros_pesquisa_default']:
-        st.session_state['lista_parametros_pesquisa_default'].append(st.session_state['parametro_add'])
-    st.session_state['lista_parametros_pesquisa_default'] = lista_parametros_pesquisa_default
-    st.session_state['parametro_add'] = ''
+    if (
+        st.session_state["parametro_add"]
+        not in st.session_state["lista_parametros_pesquisa_default"]
+    ):
+        st.session_state["lista_parametros_pesquisa_default"].append(
+            st.session_state["parametro_add"]
+        )
+    st.session_state[
+        "lista_parametros_pesquisa_default"
+    ] = lista_parametros_pesquisa_default
+    st.session_state["parametro_add"] = ""
+
 
 st.set_page_config(layout="wide")
 
 st.title("Análise de crimes")
 
 col1, col2 = st.columns(2)
+
 with col1:
-    st.text_input("Parâmetro:", key='parametro_add')
+    st.text_input("Parâmetro:", key="parametro_add")
     st.button("Adicionar", on_click=clear_add_parametro)
- 
-col1, col2 = st.columns(2)
-
-with col1:
-
-    lista_parametros_pesquisa = st.multiselect(
-        "Parâmetros de pesquisa:",
-        options=lista_parametros_pesquisa_default,
-        default=lista_parametros_pesquisa_default,
-    )
-
 
 with col2:
     noticias_maximo_retornado = st.number_input(
         "Numero de notícias a serem retornadas", value=10
     )
 
+lista_parametros_pesquisa = st.multiselect(
+    "Parâmetros de pesquisa:",
+    options=lista_parametros_pesquisa_default,
+    default=lista_parametros_pesquisa_default,
+)
 
 if st.button("Executar"):
     st.session_state["df"] = executar()
 
 if "df" in st.session_state:
     df = st.session_state["df"]
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.markdown("#### Município")
-    col2.markdown("#### Regional")
-    col3.markdown("#### Departamento")
-    col4.markdown("#### Título")
-    col5.markdown("#### Link")
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1.markdown("##### Data Publicação")
+    col2.markdown("##### Município")
+    col3.markdown("##### Regional")
+    col4.markdown("##### Departamento")
+    col5.markdown("##### Título")
+    col6.markdown("##### Link")
     for index, row in df.iterrows():
         with st.container():
-            col1, col2, col3, col4, col5 = st.columns(5)
-            col1.write(row["Município"])
-            col2.write(row["Regional"])
-            col3.write(row["Departamento"])
-            col4.markdown("*%s*" % row["Título"])
-            col5.write("[link](%s)" % row["Links"])
+            col1, col2, col3, col4, col5, col6 = st.columns(6)
+            col1.write(row["Data Publicação"].strftime('%d/%m/%Y'))
+            col2.write(row["Município"])
+            col3.write(row["Regional"])
+            col4.write(row["Departamento"])
+            col5.markdown("*%s*" % row["Título"])
+            col6.write("[link](%s)" % row["Links"])
     csv = convert_df(df)
     st.download_button(
         "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
