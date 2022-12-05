@@ -76,7 +76,7 @@ else:
 
 def remove_tags(html):
     try:
-        soup = BeautifulSoup(html, "html.parser")
+        soup = BeautifulSoup(html, "html.parser").find('main')
         for data in soup(["style", "script"]):
             data.decompose()
         return " ".join(soup.stripped_strings)
