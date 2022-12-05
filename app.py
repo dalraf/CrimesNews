@@ -35,6 +35,37 @@ else:
     )
     st.session_state["dados_municipios"] = dados_municipios
 
+if "lista_parametros_pesquisa_default" in st.session_state:
+    lista_parametros_pesquisa_default = st.session_state[
+        "lista_parametros_pesquisa_default"
+    ]
+else:
+    lista_parametros_pesquisa_default = [
+        "delegado",
+        "chefe de polícia",
+        "chefe de departamento",
+        "delegado regional",
+        "investigador",
+        "escrivão",
+        "perito",
+        "perícia",
+        "médico legista",
+        "médico legal",
+        "IML",
+        "homicídio",
+        "feminicídio",
+        "roubo",
+        "tráfico",
+        "lavagem de dinheiro",
+        "receptação",
+        "furto",
+        "arma de fogo",
+        "ameaça",
+        "ameaçar",
+        "ameaçou",
+        "foragido",
+    ]
+
 
 def remove_tags(html):
     try:
@@ -100,37 +131,21 @@ def executar():
     dados_crimes = pd.DataFrame(lista_formatada, columns=colunas)
     return dados_crimes
 
+def clear_add_parametro():
+    if st.session_state['parametro_add'] not in st.session_state['lista_parametros_pesquisa_default']:
+        st.session_state['lista_parametros_pesquisa_default'].append(st.session_state['parametro_add'])
+    st.session_state['lista_parametros_pesquisa_default'] = lista_parametros_pesquisa_default
+    st.session_state['parametro_add'] = ''
 
 st.set_page_config(layout="wide")
 
 st.title("Análise de crimes")
 
-lista_parametros_pesquisa_default = [
-    "delegado",
-    "chefe de polícia",
-    "chefe de departamento",
-    "delegado regional",
-    "investigador",
-    "escrivão",
-    "perito",
-    "perícia",
-    "médico legista",
-    "médico legal",
-    "IML",
-    "homicídio",
-    "feminicídio",
-    "roubo",
-    "tráfico",
-    "lavagem de dinheiro",
-    "receptação",
-    "furto",
-    "arma de fogo",
-    "ameaça",
-    "ameaçar",
-    "ameaçou",
-    "foragido",
-]
-
+col1, col2 = st.columns(2)
+with col1:
+    st.text_input("Parâmetro:", key='parametro_add')
+    st.button("Adicionar", on_click=clear_add_parametro)
+ 
 col1, col2 = st.columns(2)
 
 with col1:
