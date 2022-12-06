@@ -184,7 +184,13 @@ if st.button("Executar"):
     st.session_state["df"] = executar()
 
 if "df" in st.session_state:
+    st.markdown("""---""")
     df = st.session_state["df"]
+    csv = convert_df(df)
+    st.download_button(
+        "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
+    )
+    st.markdown("""---""")
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     col1.markdown("##### Data Publicação")
     col2.markdown("##### Município")
@@ -201,7 +207,4 @@ if "df" in st.session_state:
             col4.write(row["Departamento"])
             col5.markdown("*%s*" % row["Título"])
             col6.write("[link](%s)" % row["Links"])
-    csv = convert_df(df)
-    st.download_button(
-        "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
-    )
+
