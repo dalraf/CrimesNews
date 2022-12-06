@@ -7,11 +7,9 @@ import spacy
 import streamlit as st
 import concurrent.futures
 from time import mktime
-from datetime import datetime, timezone, timedelta
+from datetime import date
 
 nlp = spacy.load("pt_core_news_sm")
-
-fusohorario = timedelta(hours=-3)
 
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
 sheet_name = "Pagina1"
@@ -98,27 +96,28 @@ def convert_df(df):
     return df.to_csv(index=False).encode("utf-8")
 
 
-def format_news(url):
+def format_news(url, data_inicio, data_fim):
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
     lista_formatada = []
     for news in noticias:
-        titulo = news["title"]
-        pubdate = datetime.fromtimestamp(mktime(news['published_parsed']), timezone(fusohorario))
-        link = news["links"][0]["href"]
-        link_text = get_text_url(link)
-        doc_link_text = nlp(link_text)
-        list_ent_gpe = []
-        for ent in doc_link_text.ents:
-            if ent.label_ in ("LOC", "GPE"):
-                list_ent_gpe.append(ent.text)
-        for row in dados_municipios.iterrows():
-            municipio = row[1]["Municipio"]
-            if municipio in list_ent_gpe:
-                regional = row[1]["Regional"]
-                departamento = row[1]["Departamento"]
-                lista_formatada.append(
-                    [pubdate, municipio, regional, departamento, titulo, link]
-                )
+        pubdate = date.fromtimestamp(mktime(news['published_parsed']))
+        if pubdate >= data_inicio and pubdate <= data_fim:
+            titulo = news["title"]
+            link = news["links"][0]["href"]
+            link_text = get_text_url(link)
+            doc_link_text = nlp(link_text)
+            list_ent_gpe = []
+            for ent in doc_link_text.ents:
+                if ent.label_ in ("LOC", "GPE"):
+                    list_ent_gpe.append(ent.text)
+            for row in dados_municipios.iterrows():
+                municipio = row[1]["Municipio"]
+                if municipio in list_ent_gpe:
+                    regional = row[1]["Regional"]
+                    departamento = row[1]["Departamento"]
+                    lista_formatada.append(
+                        [pubdate, municipio, regional, departamento, titulo, link]
+                    )
     return lista_formatada
 
 
@@ -130,7 +129,7 @@ def executar():
         for pesquisa in lista_parametros_pesquisa:
             pesquisa_url = urllib.parse.quote_plus(pesquisa)
             url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
-            future = executor.submit(format_news, url)
+            future = executor.submit(format_news, url, data_inicio, data_fim)
             futures.append(future)
 
     for future in futures:
@@ -168,6 +167,12 @@ with col2:
     noticias_maximo_retornado = st.number_input(
         "Numero de notícias a serem retornadas", value=10
     )
+
+col1, col2 = st.columns(2)
+with col1:
+    data_inicio = st.date_input('Filtar por data (Início):')
+with col2:
+    data_fim = st.date_input('(Fim)')
 
 lista_parametros_pesquisa = st.multiselect(
     "Parâmetros de pesquisa:",
