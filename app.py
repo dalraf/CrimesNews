@@ -195,7 +195,7 @@ if "df" in st.session_state:
     for index, row in df.iterrows():
         with st.container():
             col1, col2, col3, col4, col5, col6 = st.columns(6)
-            col1.write(row["Data Publicação"].strftime('%d/%m/%Y'))
+            col1.write(row["Data Publicação"].strftime('%Y/%m/%d'))
             col2.write(row["Município"])
             col3.write(row["Regional"])
             col4.write(row["Departamento"])
