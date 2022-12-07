@@ -8,6 +8,7 @@ import streamlit as st
 import concurrent.futures
 from time import mktime
 from datetime import date
+from io import BytesIO
 
 nlp = spacy.load("pt_core_news_sm")
 
@@ -101,7 +102,10 @@ def get_text_url(url):
 
 
 def convert_df(df):
-    return df.to_csv(index=False).encode("utf-8")
+    output = BytesIO()
+    df.to_excel(output, index=False)
+    processed_data = output.getvalue()
+    return processed_data
 
 
 def format_news(pesquisa, data_inicio, data_fim):
@@ -202,9 +206,9 @@ if st.button("Executar"):
 if "df" in st.session_state:
     st.markdown("""---""")
     df = st.session_state["df"]
-    csv = convert_df(df)
+    xlsx = convert_df(df)
     st.download_button(
-        "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
+        "Fazer download", xlsx, "crimes.xlsx", key="download-xls"
     )
     st.markdown("""---""")
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
