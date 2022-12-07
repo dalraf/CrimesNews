@@ -14,7 +14,15 @@ nlp = spacy.load("pt_core_news_sm")
 sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
 sheet_name = "Pagina1"
 url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-colunas = ["Data Publicação","Município", "Regional", "Departamento", "Título", "Links"]
+colunas = [
+    "Data Publicação",
+    "Termo de Pesquisa",
+    "Município",
+    "Regional",
+    "Departamento",
+    "Título",
+    "Links",
+]
 
 
 def municipio_string_format(var):
@@ -74,7 +82,7 @@ else:
 
 def remove_tags(html):
     try:
-        soup = BeautifulSoup(html, "html.parser").find('main')
+        soup = BeautifulSoup(html, "html.parser").find("main")
         for data in soup(["style", "script"]):
             data.decompose()
         return " ".join(soup.stripped_strings)
@@ -85,7 +93,7 @@ def remove_tags(html):
 
 def get_text_url(url):
     try:
-        page = requests.get(url, timeout=5)
+        page = requests.get(url, timeout=10)
         return remove_tags(page.content)
     except Exception as e:
         print("Erro de busca dos dados do site", e.args[0])
@@ -96,11 +104,13 @@ def convert_df(df):
     return df.to_csv(index=False).encode("utf-8")
 
 
-def format_news(url, data_inicio, data_fim):
+def format_news(pesquisa, data_inicio, data_fim):
+    pesquisa_url = urllib.parse.quote_plus(pesquisa)
+    url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
     lista_formatada = []
     for news in noticias:
-        pubdate = date.fromtimestamp(mktime(news['published_parsed']))
+        pubdate = date.fromtimestamp(mktime(news["published_parsed"]))
         if pubdate >= data_inicio and pubdate <= data_fim:
             titulo = news["title"]
             link = news["links"][0]["href"]
@@ -116,7 +126,15 @@ def format_news(url, data_inicio, data_fim):
                     regional = row[1]["Regional"]
                     departamento = row[1]["Departamento"]
                     lista_formatada.append(
-                        [pubdate, municipio, regional, departamento, titulo, link]
+                        [
+                            pubdate,
+                            pesquisa,
+                            municipio,
+                            regional,
+                            departamento,
+                            titulo,
+                            link,
+                        ]
                     )
     return lista_formatada
 
@@ -127,15 +145,13 @@ def executar():
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for pesquisa in lista_parametros_pesquisa:
-            pesquisa_url = urllib.parse.quote_plus(pesquisa)
-            url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
-            future = executor.submit(format_news, url, data_inicio, data_fim)
+            future = executor.submit(format_news, pesquisa, data_inicio, data_fim)
             futures.append(future)
 
     for future in futures:
         lista_formatada += future.result()
 
-    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas)
+    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(by='Data Publicação',ascending=False)
     return dados_crimes
 
 
@@ -170,9 +186,9 @@ with col2:
 
 col1, col2 = st.columns(2)
 with col1:
-    data_inicio = st.date_input('Filtar por data (Início):')
+    data_inicio = st.date_input("Filtar por data (Início):")
 with col2:
-    data_fim = st.date_input('(Fim)')
+    data_fim = st.date_input("(Fim)")
 
 lista_parametros_pesquisa = st.multiselect(
     "Parâmetros de pesquisa:",
@@ -191,20 +207,21 @@ if "df" in st.session_state:
         "Fazer download", csv, "crimes.csv", "text/csv", key="download-csv"
     )
     st.markdown("""---""")
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     col1.markdown("##### Data Publicação")
-    col2.markdown("##### Município")
-    col3.markdown("##### Regional")
-    col4.markdown("##### Departamento")
-    col5.markdown("##### Título")
-    col6.markdown("##### Link")
+    col2.markdown('##### Termo de Pesquisa')
+    col3.markdown("##### Município")
+    col4.markdown("##### Regional")
+    col5.markdown("##### Departamento")
+    col6.markdown("##### Título")
+    col7.markdown("##### Link")
     for index, row in df.iterrows():
         with st.container():
-            col1, col2, col3, col4, col5, col6 = st.columns(6)
-            col1.write(row["Data Publicação"].strftime('%Y/%m/%d'))
-            col2.write(row["Município"])
-            col3.write(row["Regional"])
-            col4.write(row["Departamento"])
-            col5.markdown("*%s*" % row["Título"])
-            col6.write("[link](%s)" % row["Links"])
-
+            col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+            col1.write(row["Data Publicação"].strftime("%Y/%m/%d"))
+            col2.write(row['Termo de Pesquisa'])
+            col3.write(row["Município"])
+            col4.write(row["Regional"])
+            col5.write(row["Departamento"])
+            col6.markdown("*%s*" % row["Título"])
+            col7.write("[link](%s)" % row["Links"])
