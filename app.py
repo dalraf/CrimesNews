@@ -12,9 +12,10 @@ from io import BytesIO
 
 nlp = spacy.load("pt_core_news_sm")
 
-sheet_id = "1Cl-OcL0Kb3IHtjnH3M0_0mkKkK0pna7eOxhu9hvx688"
-sheet_name = "Pagina1"
-url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+sheet_id = "1d12wtIAsf888mM08VqMXvL9uN1jevxoCMPwStZ910EA"
+sheet_name_municipios = "MUNICIPIOS"
+sheet_name_termos = "TERMOS"
+
 colunas = [
     "Data Publicação",
     "Termo de Pesquisa",
@@ -24,6 +25,12 @@ colunas = [
     "Título",
     "Links",
 ]
+
+
+def get_data_from_sheet(sheet_id, sheet_name):
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    df = pd.read_csv(url)
+    return df
 
 
 def municipio_string_format(var):
@@ -40,7 +47,7 @@ def municipio_string_format(var):
 if "dados_municipios" in st.session_state:
     dados_municipios = st.session_state["dados_municipios"]
 else:
-    dados_municipios = pd.read_csv(url)
+    dados_municipios = get_data_from_sheet(sheet_id, sheet_name_municipios)
     dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
         lambda x: municipio_string_format(x)
     )
@@ -51,31 +58,9 @@ if "lista_parametros_pesquisa_default" in st.session_state:
         "lista_parametros_pesquisa_default"
     ]
 else:
-    lista_parametros_pesquisa_default = [
-        "delegado",
-        "chefe de polícia",
-        "chefe de departamento",
-        "delegado regional",
-        "investigador",
-        "escrivão",
-        "perito",
-        "perícia",
-        "médico legista",
-        "médico legal",
-        "IML",
-        "homicídio",
-        "feminicídio",
-        "roubo",
-        "tráfico",
-        "lavagem de dinheiro",
-        "receptação",
-        "furto",
-        "arma de fogo",
-        "ameaça",
-        "ameaçar",
-        "ameaçou",
-        "foragido",
-    ]
+    lista_parametros_pesquisa_default = list(
+        get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
+    )
     st.session_state[
         "lista_parametros_pesquisa_default"
     ] = lista_parametros_pesquisa_default
@@ -155,7 +140,9 @@ def executar():
     for future in futures:
         lista_formatada += future.result()
 
-    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(by='Data Publicação',ascending=False)
+    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(
+        by="Data Publicação", ascending=False
+    )
     return dados_crimes
 
 
@@ -207,13 +194,11 @@ if "df" in st.session_state:
     st.markdown("""---""")
     df = st.session_state["df"]
     xlsx = convert_df(df)
-    st.download_button(
-        "Fazer download", xlsx, "crimes.xlsx", key="download-xls"
-    )
+    st.download_button("Fazer download", xlsx, "crimes.xlsx", key="download-xls")
     st.markdown("""---""")
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     col1.markdown("##### Data Publicação")
-    col2.markdown('##### Termo de Pesquisa')
+    col2.markdown("##### Termo de Pesquisa")
     col3.markdown("##### Município")
     col4.markdown("##### Regional")
     col5.markdown("##### Departamento")
@@ -223,7 +208,7 @@ if "df" in st.session_state:
         with st.container():
             col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
             col1.write(row["Data Publicação"].strftime("%Y/%m/%d"))
-            col2.write(row['Termo de Pesquisa'])
+            col2.write(row["Termo de Pesquisa"])
             col3.write(row["Município"])
             col4.write(row["Regional"])
             col5.write(row["Departamento"])
