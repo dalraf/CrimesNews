@@ -10,7 +10,7 @@ from time import mktime
 from datetime import date
 from io import BytesIO
 
-nlp = spacy.load("pt_core_news_sm")
+nlp = spacy.load("pt_core_news_lg")
 
 sheet_id = "1d12wtIAsf888mM08VqMXvL9uN1jevxoCMPwStZ910EA"
 sheet_name_municipios = "MUNICIPIOS"

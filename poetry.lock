@@ -498,7 +498,7 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
-name = "pt-core-news-sm"
+name = "pt-core-news-lg"
 version = "3.4.0"
 description = "Portuguese pipeline optimized for CPU. Components: tok2vec, morphologizer, parser, lemmatizer (trainable_lemmatizer), senter, ner, attribute_ruler."
 category = "main"
@@ -510,7 +510,7 @@ spacy = ">=3.4.0,<3.5.0"
 
 [package.source]
 type = "url"
-url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.4.0/pt_core_news_sm-3.4.0-py3-none-any.whl"
+url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_lg-3.4.0/pt_core_news_lg-3.4.0-py3-none-any.whl"
 
 [[package]]
 name = "pyarrow"
@@ -1094,7 +1094,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "252d602c5dbd20096b8f4376109c1546efb03f29260c32b8548e63f6a386e056"
+content-hash = "15790e0851df0b86e76abe0cf77ad1fc949ef6ab9b368611a5a6530abfdcb940"
 
 [metadata.files]
 altair = [
@@ -1560,7 +1560,7 @@ protobuf = [
     {file = "protobuf-3.20.3-py2.py3-none-any.whl", hash = "sha256:a7ca6d488aa8ff7f329d4c545b2dbad8ac31464f1d8b1c87ad1346717731e4db"},
     {file = "protobuf-3.20.3.tar.gz", hash = "sha256:2e3427429c9cffebf259491be0af70189607f365c2f41c7c3764af6f337105f2"},
 ]
-pt-core-news-sm = []
+pt-core-news-lg = []
 pyarrow = [
     {file = "pyarrow-10.0.1-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:e00174764a8b4e9d8d5909b6d19ee0c217a6cf0232c5682e31fdfbd5a9f0ae52"},
     {file = "pyarrow-10.0.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6f7a7dbe2f7f65ac1d0bd3163f756deb478a9e9afc2269557ed75b1b25ab3610"},

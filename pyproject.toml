@@ -10,9 +10,9 @@ python = "^3.10"
 streamlit = "^1.15.1"
 feedparser = "^6.0.10"
 gspread = "^5.7.1"
-pt-core-news-sm = {url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.4.0/pt_core_news_sm-3.4.0-py3-none-any.whl"}
 beautifulsoup4 = "^4.11.1"
 openpyxl = "^3.0.10"
+pt-core-news-lg = {url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_lg-3.4.0/pt_core_news_lg-3.4.0-py3-none-any.whl"}
 
 
 [tool.poetry.group.dev.dependencies]
