@@ -160,7 +160,12 @@ def clear_add_parametro():
     st.session_state["parametro_add"] = ""
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+   page_title="Crimes Reais",
+   page_icon="🧊",
+   layout="wide",
+   initial_sidebar_state="expanded",
+)
 
 st.title("Análise de crimes")
 
