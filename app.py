@@ -200,22 +200,4 @@ if "df" in st.session_state:
     df = st.session_state["df"]
     xlsx = convert_df(df)
     st.download_button("Fazer download", xlsx, "crimes.xlsx", key="download-xls")
-    st.markdown("""---""")
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-    col1.markdown("##### Data Publicação")
-    col2.markdown("##### Termo de Pesquisa")
-    col3.markdown("##### Município")
-    col4.markdown("##### Regional")
-    col5.markdown("##### Departamento")
-    col6.markdown("##### Título")
-    col7.markdown("##### Link")
-    for index, row in df.iterrows():
-        with st.container():
-            col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-            col1.write(row["Data Publicação"].strftime("%Y/%m/%d"))
-            col2.write(row["Termo de Pesquisa"])
-            col3.write(row["Município"])
-            col4.write(row["Regional"])
-            col5.write(row["Departamento"])
-            col6.markdown("*%s*" % row["Título"])
-            col7.write("[link](%s)" % row["Links"])
+
