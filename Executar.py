@@ -4,7 +4,6 @@ import urllib.parse
 from bs4 import BeautifulSoup
 import requests
 import spacy
-import streamlit as st
 import concurrent.futures
 from time import mktime
 from datetime import date
@@ -32,6 +31,9 @@ def get_data_from_sheet(sheet_id, sheet_name):
     df = pd.read_csv(url)
     return df
 
+lista_parametros_pesquisa = list(
+        get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
+    )
 
 def municipio_string_format(var):
     lista_string = []
@@ -44,27 +46,10 @@ def municipio_string_format(var):
     return " ".join(lista_string)
 
 
-if "dados_municipios" in st.session_state:
-    dados_municipios = st.session_state["dados_municipios"]
-else:
-    dados_municipios = get_data_from_sheet(sheet_id, sheet_name_municipios)
-    dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
+dados_municipios = get_data_from_sheet(sheet_id, sheet_name_municipios)
+dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
         lambda x: municipio_string_format(x)
     )
-    st.session_state["dados_municipios"] = dados_municipios
-
-if "lista_parametros_pesquisa_default" in st.session_state:
-    lista_parametros_pesquisa_default = st.session_state[
-        "lista_parametros_pesquisa_default"
-    ]
-else:
-    lista_parametros_pesquisa_default = list(
-        get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
-    )
-    st.session_state[
-        "lista_parametros_pesquisa_default"
-    ] = lista_parametros_pesquisa_default
-
 
 def remove_tags(html):
     try:
@@ -93,7 +78,8 @@ def convert_df(df):
     return processed_data
 
 
-def format_news(pesquisa, data_inicio, data_fim):
+def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
+    dados_municipios = get_data_from_sheet(sheet_id, sheet_name_municipios)
     pesquisa_url = urllib.parse.quote_plus(pesquisa)
     url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
@@ -128,13 +114,13 @@ def format_news(pesquisa, data_inicio, data_fim):
     return lista_formatada
 
 
-def executar():
+def executar(data_inicio, data_fim, noticias_maximo_retornado=10):
 
     lista_formatada = []
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for pesquisa in lista_parametros_pesquisa:
-            future = executor.submit(format_news, pesquisa, data_inicio, data_fim)
+            future = executor.submit(format_news, pesquisa, data_inicio, data_fim, noticias_maximo_retornado)
             futures.append(future)
 
     for future in futures:
@@ -144,60 +130,3 @@ def executar():
         by="Data Publicação", ascending=False
     )
     return dados_crimes
-
-
-def clear_add_parametro():
-    if (
-        st.session_state["parametro_add"]
-        not in st.session_state["lista_parametros_pesquisa_default"]
-    ):
-        st.session_state["lista_parametros_pesquisa_default"].append(
-            st.session_state["parametro_add"]
-        )
-    st.session_state[
-        "lista_parametros_pesquisa_default"
-    ] = lista_parametros_pesquisa_default
-    st.session_state["parametro_add"] = ""
-
-
-st.set_page_config(
-   page_title="Crimes Reais",
-   page_icon="🧊",
-   layout="wide",
-   initial_sidebar_state="expanded",
-)
-
-st.title("Análise de crimes")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.text_input("Parâmetro:", key="parametro_add")
-    st.button("Adicionar", on_click=clear_add_parametro)
-
-with col2:
-    noticias_maximo_retornado = st.number_input(
-        "Numero de notícias a serem retornadas", value=10
-    )
-
-col1, col2 = st.columns(2)
-with col1:
-    data_inicio = st.date_input("Filtar por data (Início):")
-with col2:
-    data_fim = st.date_input("(Fim)")
-
-lista_parametros_pesquisa = st.multiselect(
-    "Parâmetros de pesquisa:",
-    options=lista_parametros_pesquisa_default,
-    default=lista_parametros_pesquisa_default,
-)
-
-if st.button("Executar"):
-    st.session_state["df"] = executar()
-
-if "df" in st.session_state:
-    st.markdown("""---""")
-    df = st.session_state["df"]
-    xlsx = convert_df(df)
-    st.download_button("Fazer download", xlsx, "crimes.xlsx", key="download-xls")
-
