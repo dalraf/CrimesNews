@@ -1,4 +1,13 @@
-import streamlit as st
+import subprocess
+
+try:
+    import streamlit as st
+except Exception as e:
+    print("Erro de importação do Streamlit", e.args[0])
+    print("Instalando streamlit...")
+    subprocess.check_call(["python", "-m", "pip", "install", "streamlit"])
+    import streamlit as st
+
 from Core import (
     executar,
     convert_df,
