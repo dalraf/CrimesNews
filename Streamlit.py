@@ -1,5 +1,5 @@
 import streamlit as st
-from Executar import (
+from Core import (
     executar,
     convert_df,
 )

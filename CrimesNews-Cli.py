@@ -1,4 +1,4 @@
-from Executar import executar
+from Core import executar
 from datetime import datetime, timedelta
 
 # definir valores padrão para as datas
