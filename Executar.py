@@ -36,6 +36,7 @@ except Exception as e:
     print("Instalando requests...")
     subprocess.check_call(["python", "-m", "pip", "install", "requests"])
     import requests
+
 try:
     import spacy, spacy.cli
 except Exception as e:
@@ -50,7 +51,7 @@ except Exception as e:
     print("Erro de download do modelo de linguagem", e.args[0])
     print("Baixando modelo de linguagem...")
     spacy.cli.download("pt_core_news_sm")
-    nlp = spacy.load("pt_core_news_sm")    
+    nlp = spacy.load("pt_core_news_sm")
 
 sheet_id = "1d12wtIAsf888mM08VqMXvL9uN1jevxoCMPwStZ910EA"
 sheet_name_municipios = "MUNICIPIOS"
@@ -72,9 +73,11 @@ def get_data_from_sheet(sheet_id, sheet_name):
     df = pd.read_csv(url)
     return df
 
+
 lista_parametros_pesquisa = list(
-        get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
-    )
+    get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
+)
+
 
 def municipio_string_format(var):
     lista_string = []
@@ -89,8 +92,9 @@ def municipio_string_format(var):
 
 dados_municipios = get_data_from_sheet(sheet_id, sheet_name_municipios)
 dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
-        lambda x: municipio_string_format(x)
-    )
+    lambda x: municipio_string_format(x)
+)
+
 
 def remove_tags(html):
     try:
@@ -160,7 +164,9 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10):
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for pesquisa in lista_parametros_pesquisa:
-            future = executor.submit(format_news, pesquisa, data_inicio, data_fim, noticias_maximo_retornado)
+            future = executor.submit(
+                format_news, pesquisa, data_inicio, data_fim, noticias_maximo_retornado
+            )
             futures.append(future)
 
     for future in futures:
