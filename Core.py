@@ -117,7 +117,7 @@ def remove_tags(html):
 
 def get_text_url(url):
     try:
-        page = requests.get(url, timeout=10)
+        page = requests.get(url, timeout=60)
         return remove_tags(page.content)
     except Exception as e:
         print("Erro de busca dos dados do site", e.args[0])
