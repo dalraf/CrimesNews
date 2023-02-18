@@ -113,10 +113,12 @@ def remove_tags(html):
             soup_list = BeautifulSoup(html, "html.parser").find_all("main")
         except:
             try:
-                soup_list = BeautifulSoup(html, "html.parser").find_all('div', class_=re.compile(r'main'))
-            except:
-                print("Erro de busca do main ou body")
-        final_text = ''
+                soup_list = BeautifulSoup(html, "html.parser").find_all(
+                    "div", class_=re.compile(r"main")
+                )
+            except Exception as e:
+                print("Erro de busca do main ou body: ", e.args[0])
+        final_text = ""
         if soup_list:
             for soup in soup_list:
                 for data in soup(["style", "script"]):
@@ -125,7 +127,7 @@ def remove_tags(html):
                 final_text += " ".join(soup.stripped_strings)
         return final_text
     except Exception as e:
-        print("Erro de análise de html", e.args[0])
+        print("Erro de análise de html: ", e.args[0])
         return ""
 
 
@@ -134,7 +136,7 @@ def get_text_url(url):
         page = requests.get(url, verify=False, timeout=60)
         return remove_tags(page.content)
     except Exception as e:
-        print("Erro de busca dos dados do site", e.args[0])
+        print("Erro de busca dos dados do site: ", e.args[0])
         return ""
 
 
