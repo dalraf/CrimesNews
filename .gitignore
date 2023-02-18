@@ -128,3 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 crimes.xlsx
+CrimesNews-Cli.build
+CrimesNews-Cli.dist
