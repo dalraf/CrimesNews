@@ -1,13 +1,48 @@
-import pandas as pd
-import feedparser
-import urllib.parse
-from bs4 import BeautifulSoup
-import requests
-import spacy, spacy.cli
-import concurrent.futures
+import subprocess
 from time import mktime
 from datetime import date
 from io import BytesIO
+import urllib.parse
+import concurrent.futures
+
+try:
+    import pandas as pd
+except Exception as e:
+    print("Erro de importação do pandas", e.args[0])
+    print("Instalando pandas...")
+    subprocess.check_call(["python", "-m", "pip", "install", "pandas"])
+    import pandas as pd
+
+try:
+    import feedparser
+except Exception as e:
+    print("Erro de importação do feedparser", e.args[0])
+    print("Instalando feedparser...")
+    subprocess.check_call(["python", "-m", "pip", "install", "feedparser"])
+    import feedparser
+
+try:
+    from bs4 import BeautifulSoup
+except Exception as e:
+    print("Erro de importação do BeautifulSoup", e.args[0])
+    print("Instalando BeautifulSoup...")
+    subprocess.check_call(["python", "-m", "pip", "install", "beautifulsoup4"])
+    from bs4 import BeautifulSoup
+
+try:
+    import requests
+except Exception as e:
+    print("Erro de importação do requests", e.args[0])
+    print("Instalando requests...")
+    subprocess.check_call(["python", "-m", "pip", "install", "requests"])
+    import requests
+try:
+    import spacy, spacy.cli
+except Exception as e:
+    print("Erro de importação do spacy", e.args[0])
+    print("Instalando spacy...")
+    subprocess.check_call(["python", "-m", "pip", "install", "spacy"])
+    import spacy, spacy.cli
 
 try:
     nlp = spacy.load("pt_core_news_sm")
