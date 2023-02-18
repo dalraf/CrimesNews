@@ -4,6 +4,7 @@ from datetime import date
 from io import BytesIO
 import urllib.parse
 import concurrent.futures
+import re
 
 try:
     import pandas as pd
@@ -61,6 +62,8 @@ except Exception as e:
     spacy.cli.download("pt_core_news_sm")
     nlp = spacy.load("pt_core_news_sm")
 
+
+requests.packages.urllib3.disable_warnings()
 sheet_id = "1d12wtIAsf888mM08VqMXvL9uN1jevxoCMPwStZ910EA"
 sheet_name_municipios = "MUNICIPIOS"
 sheet_name_termos = "TERMOS"
@@ -106,10 +109,21 @@ dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
 
 def remove_tags(html):
     try:
-        soup = BeautifulSoup(html, "html.parser").find("main")
-        for data in soup(["style", "script"]):
-            data.decompose()
-        return " ".join(soup.stripped_strings)
+        try:
+            soup_list = BeautifulSoup(html, "html.parser").find_all("main")
+        except:
+            try:
+                soup_list = BeautifulSoup(html, "html.parser").find_all('div', class_=re.compile(r'main'))
+            except:
+                print("Erro de busca do main ou body")
+        final_text = ''
+        if soup_list:
+            for soup in soup_list:
+                for data in soup(["style", "script"]):
+                    data.decompose()
+            for soup in soup_list:
+                final_text += " ".join(soup.stripped_strings)
+        return final_text
     except Exception as e:
         print("Erro de análise de html", e.args[0])
         return ""
@@ -117,7 +131,7 @@ def remove_tags(html):
 
 def get_text_url(url):
     try:
-        page = requests.get(url, timeout=60)
+        page = requests.get(url, verify=False, timeout=60)
         return remove_tags(page.content)
     except Exception as e:
         print("Erro de busca dos dados do site", e.args[0])
