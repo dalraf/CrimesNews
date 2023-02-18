@@ -111,13 +111,14 @@ def remove_tags(html):
     try:
         try:
             soup_list = BeautifulSoup(html, "html.parser").find_all("main")
-        except:
+        except Exception as e:
+            print("Erro de busca da tag main: ", e.args[0])
             try:
                 soup_list = BeautifulSoup(html, "html.parser").find_all(
                     "div", class_=re.compile(r"main")
                 )
             except Exception as e:
-                print("Erro de busca do main ou body: ", e.args[0])
+                print("Erro de busca do main class: ", e.args[0])
         final_text = ""
         if soup_list:
             for soup in soup_list:
