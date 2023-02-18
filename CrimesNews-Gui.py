@@ -33,7 +33,7 @@ data_fim.insert(0, data_fim_padrao)
 data_fim.grid(row=1, column=1, padx=10, pady=10)
 
 # Cria o campo de entrada para o valor noticias_maximo_retornado
-label_noticias_maximo_retornado = Label(root, text="noticias_maximo_retornado:")
+label_noticias_maximo_retornado = Label(root, text="Notícias maximo retornado:")
 label_noticias_maximo_retornado.grid(row=2, column=0, padx=10, pady=10)
 noticias_maximo_retornado = Entry(root, width=10)
 noticias_maximo_retornado.insert(0, "10")
