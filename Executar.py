@@ -3,13 +3,19 @@ import feedparser
 import urllib.parse
 from bs4 import BeautifulSoup
 import requests
-import spacy
+import spacy, spacy.cli
 import concurrent.futures
 from time import mktime
 from datetime import date
 from io import BytesIO
 
-nlp = spacy.load("pt_core_news_sm")
+try:
+    nlp = spacy.load("pt_core_news_sm")
+except Exception as e:
+    print("Erro de download do modelo de linguagem", e.args[0])
+    print("Baixando modelo de linguagem...")
+    spacy.cli.download("pt_core_news_sm")
+    nlp = spacy.load("pt_core_news_sm")    
 
 sheet_id = "1d12wtIAsf888mM08VqMXvL9uN1jevxoCMPwStZ910EA"
 sheet_name_municipios = "MUNICIPIOS"
