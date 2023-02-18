@@ -14,6 +14,14 @@ except Exception as e:
     import pandas as pd
 
 try:
+    import openpyxl
+except Exception as e:
+    print("Erro de importação do openpyxl", e.args[0])
+    print("Instalando openpyxl...")
+    subprocess.check_call(["python", "-m", "pip", "install", "openpyxl"])
+    import openpyxl
+
+try:
     import feedparser
 except Exception as e:
     print("Erro de importação do feedparser", e.args[0])
