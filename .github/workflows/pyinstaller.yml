@@ -22,6 +22,7 @@ jobs:
         pip install pyinstaller poetry
         poetry export --without-hashes -f requirements.txt --output requirements.txt
         pip install -r requirements.txt
+        python -m spacy download pt_core_news_sm
     - name: build with pyinstaller
       run: |
         python -m PyInstaller --onefile --collect-all spacy --collect-all pt_core_news_sm CrimesNews-Gui.py
