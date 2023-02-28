@@ -22,11 +22,11 @@ jobs:
         pip install pyinstaller
     - name: build with pyinstaller
       run: |
-        python -m PyInstaller --onefile --icon=NONE CrimesNews-Cli.py
+        python -m PyInstaller --onefile --collect-all spacy --collect-all pt_core_news_sm CrimesNews-Gui.py
     - uses: actions/upload-artifact@v2
       with:
-        name: CrimesNews-Cli.exe
-        path: dist\CrimesNews-Cli.exe
+        name: CrimesNews-Gui.exe
+        path: dist\CrimesNews-Gui.exe
     - name: release
       uses: actions/create-release@v1
       id: create_release
@@ -43,6 +43,6 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: dist\CrimesNews-Cli.exe
-        asset_name: CrimesNews-Cli.exe
+        asset_path: dist\CrimesNews-Gui.exe
+        asset_name: CrimesNews-Gui.exe
         asset_content_type: application/exe
