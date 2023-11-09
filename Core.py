@@ -147,9 +147,12 @@ def convert_df(df):
     processed_data = output.getvalue()
     return processed_data
 
+def encode_url(url):
+    """Codifica uma URL para uso com o Google News."""
+    return urllib.parse.quote_plus(url.encode("utf-8"))
 
 def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
-    pesquisa_url = urllib.parse.quote_plus(pesquisa)
+    pesquisa_url = encode_url(pesquisa)
     url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
     lista_formatada = []
