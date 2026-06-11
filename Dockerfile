@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.14-slim
 
 # Evitar gravação de arquivos .pyc e garantir logs em tempo real
 ENV PYTHONDONTWRITEBYTECODE=1
