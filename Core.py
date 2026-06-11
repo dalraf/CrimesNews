@@ -7,6 +7,7 @@ import concurrent.futures
 import re
 import random
 import unicodedata
+import traceback
 
 # Auto-install wrapper pattern (matching original file style)
 try:
@@ -312,10 +313,11 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
             resultado = future.result()
             lista_formatada += resultado
         except Exception as e:
-            err_coll = f"   ❌ [ERRO POOL] Falha ao coletar resultado da thread {idx}: {e}"
+            tb = traceback.format_exc()
+            err_coll = f"   ❌ [ERRO POOL] Falha ao coletar resultado da thread {idx}: {type(e).__name__}: {e}\n{tb}"
             print(err_coll)
             if progress_callback:
-                progress_callback(err_coll)
+                progress_callback(f"   ❌ [ERRO POOL] Thread {idx}: {type(e).__name__}: {e}")
             
     print(f"\n[DEBUG] Processamento finalizado. Total de correspondências: {len(lista_formatada)}")
     if progress_callback:
