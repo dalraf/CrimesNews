@@ -1,10 +1,11 @@
 import subprocess
-from time import mktime
+from time import mktime, sleep
 from datetime import date
 from io import BytesIO
 import urllib.parse
 import concurrent.futures
 import re
+import random
 
 try:
     import pandas as pd
@@ -153,42 +154,85 @@ def remove_tags(html):
 def get_text_url(url):
     try:
         print(f"[DEBUG]     Requisição HTTP para: {url}")
+        
+        # Headers realistas de um navegador
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         }
         
-        # Tentar com redirect automático
-        page = requests.get(url, verify=False, timeout=60, headers=headers, allow_redirects=True)
-        print(f"[DEBUG]     Status code: {page.status_code}")
-        print(f"[DEBUG]     URL final (após redirects): {page.url}")
-        print(f"[DEBUG]     Tamanho da resposta: {len(page.content)} bytes")
+        # Retry com backoff exponencial
+        max_tentativas = 3
+        tentativa = 0
         
-        if page.status_code == 400:
-            print(f"[DEBUG]     ⚠️ Erro 400: URL pode estar expirada ou mal formatada")
-            # Tentar decodificar a URL do Google News
+        while tentativa < max_tentativas:
             try:
-                # Extrair o newsarticle ID e tentar acessar diretamente
-                if "CBMi" in url:
-                    print(f"[DEBUG]     Tentando extrair conteúdo do ID do artigo...")
-            except:
-                pass
-            return ""
+                # Delay aleatório para não parecer bot
+                delay = random.uniform(1, 3)
+                print(f"[DEBUG]     Aguardando {delay:.1f}s antes da requisição...")
+                sleep(delay)
+                
+                page = requests.get(
+                    url, 
+                    verify=False, 
+                    timeout=30,
+                    headers=headers, 
+                    allow_redirects=True
+                )
+                
+                print(f"[DEBUG]     Tentativa {tentativa + 1}/{max_tentativas} - Status code: {page.status_code}")
+                print(f"[DEBUG]     URL final: {page.url}")
+                print(f"[DEBUG]     Tamanho: {len(page.content)} bytes")
+                
+                if page.status_code == 200:
+                    text = remove_tags(page.content)
+                    print(f"[DEBUG]     ✓ Sucesso! Texto extraído: {len(text)} caracteres")
+                    return text
+                
+                elif page.status_code == 503:
+                    tentativa += 1
+                    if tentativa < max_tentativas:
+                        espera = 2 ** tentativa  # Backoff: 2s, 4s
+                        print(f"[DEBUG]     ⚠️ Erro 503 - Aguardando {espera}s antes de retry...")
+                        sleep(espera)
+                    else:
+                        print(f"[DEBUG]     ❌ Erro 503 persistente após {max_tentativas} tentativas")
+                        return ""
+                
+                elif page.status_code == 429:
+                    print(f"[DEBUG]     ⚠️ Erro 429 (Rate Limited) - Google bloqueou requisições")
+                    return ""
+                
+                elif page.status_code == 400:
+                    print(f"[DEBUG]     ⚠️ Erro 400 - URL expirada ou mal formatada")
+                    return ""
+                
+                else:
+                    print(f"[DEBUG]     ⚠️ Erro {page.status_code}")
+                    return ""
+                    
+            except requests.exceptions.Timeout:
+                tentativa += 1
+                print(f"[DEBUG]     ❌ Timeout na tentativa {tentativa}/{max_tentativas}")
+                if tentativa < max_tentativas:
+                    sleep(2 ** tentativa)
+                    
+            except requests.exceptions.ConnectionError as e:
+                tentativa += 1
+                print(f"[DEBUG]     ❌ Erro de conexão: {e}")
+                if tentativa < max_tentativas:
+                    sleep(2 ** tentativa)
         
-        if page.status_code != 200:
-            print(f"[DEBUG]     ⚠️ Status code {page.status_code}")
-            return ""
+        print(f"[DEBUG]     ❌ Falha após {max_tentativas} tentativas")
+        return ""
         
-        text = remove_tags(page.content)
-        print(f"[DEBUG]     Texto extraído: {len(text)} caracteres")
-        return text
-    except requests.exceptions.Timeout:
-        print(f"[DEBUG]     ❌ ERRO: Timeout (60s) - servidor não respondeu a tempo")
-        return ""
-    except requests.exceptions.ConnectionError as e:
-        print(f"[DEBUG]     ❌ ERRO de conexão: {e}")
-        return ""
     except Exception as e:
-        print(f"[DEBUG]     ❌ ERRO de busca dos dados do site: {e}")
+        print(f"[DEBUG]     ❌ ERRO inesperado: {e}")
         return ""
 
 
@@ -204,12 +248,24 @@ def encode_url(url):
 
 def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
     print(f"[DEBUG] Iniciando format_news para pesquisa: {pesquisa}")
+    
+    # Delay para não sobrecarregar Google News
+    delay = random.uniform(2, 5)
+    print(f"[DEBUG] Aguardando {delay:.1f}s antes de buscar notícias...")
+    sleep(delay)
+    
     pesquisa_url = encode_url(pesquisa)
     url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     
     print(f"[DEBUG] Buscando notícias da URL: {url}")
-    noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
-    print(f"[DEBUG] Total de notícias encontradas: {len(noticias)}")
+    
+    try:
+        noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
+        print(f"[DEBUG] Total de notícias encontradas: {len(noticias)}")
+    except Exception as e:
+        print(f"[DEBUG] ❌ ERRO ao buscar feed: {e}")
+        return []
+    
     lista_formatada = []
     
     # Criar dicionário para busca rápida de municípios (O(1) em vez de O(n))
@@ -297,7 +353,12 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10):
 
     lista_formatada = []
     futures = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    
+    # Limitar número de workers para não sobrecarregar o servidor
+    max_workers = min(3, len(lista_parametros_pesquisa))
+    print(f"[DEBUG] Usando {max_workers} threads paralelas\n")
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for idx, pesquisa in enumerate(lista_parametros_pesquisa):
             print(f"[DEBUG] Submetendo pesquisa {idx + 1}/{len(lista_parametros_pesquisa)}: '{pesquisa}'")
             future = executor.submit(
@@ -309,16 +370,22 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10):
     for idx, future in enumerate(futures):
         print(f"[DEBUG] Coletando resultado {idx + 1}/{len(futures)}...")
         try:
-            resultado = future.result(timeout=300)  # 5 minutos timeout
+            resultado = future.result(timeout=600)  # 10 minutos timeout
             lista_formatada += resultado
-            print(f"[DEBUG] ✓ Resultado {idx + 1} coletado com sucesso")
+            print(f"[DEBUG] ✓ Resultado {idx + 1} coletado com sucesso ({len(resultado)} itens)")
         except Exception as e:
             print(f"[DEBUG] ❌ ERRO ao coletar resultado {idx + 1}: {e}")
 
     print(f"\n[DEBUG] Total de notícias encontradas: {len(lista_formatada)}")
-    dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(
-        by="Data Publicação", ascending=False
-    )
-    print(f"[DEBUG] DataFrame criado com sucesso")
+    
+    if lista_formatada:
+        dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(
+            by="Data Publicação", ascending=False
+        )
+        print(f"[DEBUG] DataFrame criado com sucesso")
+    else:
+        print(f"[DEBUG] ⚠️ Nenhuma notícia encontrada!")
+        dados_crimes = pd.DataFrame(columns=colunas)
+    
     print(f"[DEBUG] ============ EXECUÇÃO CONCLUÍDA ============\n")
     return dados_crimes
