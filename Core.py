@@ -100,7 +100,7 @@ def municipio_string_format(var):
 # Carregar dados iniciais das planilhas
 print("[DEBUG] Carregando termos de pesquisa...")
 try:
-    lista_parametros_pesquisa = list(get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"])[:2]
+    lista_parametros_pesquisa = list(get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"])
 except Exception as e:
     print(f"[ERROR] Não foi possível carregar os termos: {e}")
     lista_parametros_pesquisa = []
