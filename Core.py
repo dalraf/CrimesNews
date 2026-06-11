@@ -152,12 +152,17 @@ def encode_url(url):
     return urllib.parse.quote_plus(url.encode("utf-8"))
 
 def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
+    print(f"[DEBUG] Iniciando format_news para pesquisa: {pesquisa}")
     pesquisa_url = encode_url(pesquisa)
     url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
+    
+    print(f"[DEBUG] Buscando notícias da URL: {url}")
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
+    print(f"[DEBUG] Total de notícias encontradas: {len(noticias)}")
     lista_formatada = []
     
     # Criar dicionário para busca rápida de municípios (O(1) em vez de O(n))
+    print("[DEBUG] Construindo dicionário de municípios...")
     municipios_dict = {}
     for row in dados_municipios.iterrows():
         municipio = row[1]["Municipio"]
@@ -165,55 +170,94 @@ def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
             "Regional": row[1]["Regional"],
             "Departamento": row[1]["Departamento"]
         }
+    print(f"[DEBUG] Dicionário construído com {len(municipios_dict)} municípios")
     
-    for news in noticias:
-        pubdate = date.fromtimestamp(mktime(news["published_parsed"]))
-        if pubdate >= data_inicio and pubdate <= data_fim:
-            titulo = news["title"]
-            link = news["links"][0]["href"]
-            link_text = get_text_url(link)
-            doc_link_text = nlp(link_text)
+    for idx, news in enumerate(noticias):
+        print(f"[DEBUG] Processando notícia {idx + 1}/{len(noticias)}")
+        try:
+            pubdate = date.fromtimestamp(mktime(news["published_parsed"]))
+            print(f"[DEBUG]   Data: {pubdate}")
             
-            # Usar set para busca O(1) em vez de lista
-            list_ent_gpe = set()
-            for ent in doc_link_text.ents:
-                if ent.label_ in ("LOC", "GPE"):
-                    list_ent_gpe.add(ent.text)
-            
-            # Buscar apenas os municípios encontrados (muito mais rápido)
-            for municipio in list_ent_gpe:
-                if municipio in municipios_dict:
-                    regional = municipios_dict[municipio]["Regional"]
-                    departamento = municipios_dict[municipio]["Departamento"]
-                    lista_formatada.append(
-                        [
-                            pubdate,
-                            pesquisa,
-                            municipio,
-                            regional,
-                            departamento,
-                            titulo,
-                            link,
-                        ]
-                    )
+            if pubdate >= data_inicio and pubdate <= data_fim:
+                titulo = news["title"]
+                print(f"[DEBUG]   Título: {titulo[:60]}...")
+                
+                link = news["links"][0]["href"]
+                print(f"[DEBUG]   Extraindo texto do link: {link[:80]}...")
+                link_text = get_text_url(link)
+                print(f"[DEBUG]   Texto extraído: {len(link_text)} caracteres")
+                
+                print(f"[DEBUG]   Processando com NLP (spacy)...")
+                doc_link_text = nlp(link_text)
+                
+                # Usar set para busca O(1) em vez de lista
+                list_ent_gpe = set()
+                for ent in doc_link_text.ents:
+                    if ent.label_ in ("LOC", "GPE"):
+                        list_ent_gpe.add(ent.text)
+                print(f"[DEBUG]   Entidades encontradas: {list_ent_gpe}")
+                
+                # Buscar apenas os municípios encontrados (muito mais rápido)
+                matches = 0
+                for municipio in list_ent_gpe:
+                    if municipio in municipios_dict:
+                        matches += 1
+                        regional = municipios_dict[municipio]["Regional"]
+                        departamento = municipios_dict[municipio]["Departamento"]
+                        lista_formatada.append(
+                            [
+                                pubdate,
+                                pesquisa,
+                                municipio,
+                                regional,
+                                departamento,
+                                titulo,
+                                link,
+                            ]
+                        )
+                print(f"[DEBUG]   Municípios encontrados: {matches}")
+            else:
+                print(f"[DEBUG]   Data fora do intervalo ({data_inicio} a {data_fim})")
+        except Exception as e:
+            print(f"[DEBUG] ❌ ERRO ao processar notícia {idx + 1}: {e}")
+            continue
+    
+    print(f"[DEBUG] format_news concluído. Total de resultados: {len(lista_formatada)}")
     return lista_formatada
 
 
 def executar(data_inicio, data_fim, noticias_maximo_retornado=10):
+    print(f"\n[DEBUG] ============ INICIANDO EXECUÇÃO ============")
+    print(f"[DEBUG] Data início: {data_inicio}")
+    print(f"[DEBUG] Data fim: {data_fim}")
+    print(f"[DEBUG] Máx notícias por pesquisa: {noticias_maximo_retornado}")
+    print(f"[DEBUG] Total de termos de pesquisa: {len(lista_parametros_pesquisa)}")
+    print(f"[DEBUG] Termos: {lista_parametros_pesquisa}\n")
 
     lista_formatada = []
     futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        for pesquisa in lista_parametros_pesquisa:
+        for idx, pesquisa in enumerate(lista_parametros_pesquisa):
+            print(f"[DEBUG] Submetendo pesquisa {idx + 1}/{len(lista_parametros_pesquisa)}: '{pesquisa}'")
             future = executor.submit(
                 format_news, pesquisa, data_inicio, data_fim, noticias_maximo_retornado
             )
             futures.append(future)
 
-    for future in futures:
-        lista_formatada += future.result()
+    print(f"\n[DEBUG] Aguardando resultados de {len(futures)} threads...")
+    for idx, future in enumerate(futures):
+        print(f"[DEBUG] Coletando resultado {idx + 1}/{len(futures)}...")
+        try:
+            resultado = future.result(timeout=300)  # 5 minutos timeout
+            lista_formatada += resultado
+            print(f"[DEBUG] ✓ Resultado {idx + 1} coletado com sucesso")
+        except Exception as e:
+            print(f"[DEBUG] ❌ ERRO ao coletar resultado {idx + 1}: {e}")
 
+    print(f"\n[DEBUG] Total de notícias encontradas: {len(lista_formatada)}")
     dados_crimes = pd.DataFrame(lista_formatada, columns=colunas).sort_values(
         by="Data Publicação", ascending=False
     )
+    print(f"[DEBUG] DataFrame criado com sucesso")
+    print(f"[DEBUG] ============ EXECUÇÃO CONCLUÍDA ============\n")
     return dados_crimes
