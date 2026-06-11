@@ -134,35 +134,45 @@ def process_query_chunk(pesquisa, chunk, data_inicio, data_fim, noticias_maximo_
     query_encoded = urllib.parse.quote_plus(query_completa)
     url = f"https://news.google.com/rss/search?q={query_encoded}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     
-    log_msg = f"[DEBUG] Query: {pesquisa} | Grupo de {len(chunk)} cidades"
+    log_msg = f"[QUERY] Termo: '{pesquisa}' | Grupo: {chunk[0]}... e mais {len(chunk)-1} cidades"
     print(log_msg)
     if progress_callback:
         progress_callback(log_msg)
         
     try:
-        # Adicionar delay leve para evitar rate limit
-        sleep(random.uniform(0.5, 1.5))
+        # Delay leve aleatório para evitar rate limit
+        sleep(random.uniform(0.5, 1.2))
         feed = feedparser.parse(url)
-        noticias = feed.get("entries", [])[:noticias_maximo_retornado]
+        noticias = feed.get("entries", [])
+        
+        log_feed = f"   -> Feed retornado: {len(noticias)} notícias encontradas. Filtrando as top {noticias_maximo_retornado}."
+        print(log_feed)
+        if progress_callback:
+            progress_callback(log_feed)
+            
+        noticias = noticias[:noticias_maximo_retornado]
     except Exception as e:
-        err_msg = f"[ERROR] Erro ao buscar feed do grupo: {e}"
+        err_msg = f"   ❌ [ERRO] Falha ao buscar feed para o grupo: {e}"
         print(err_msg)
         if progress_callback:
             progress_callback(err_msg)
         return []
 
-    for news in noticias:
+    for idx, news in enumerate(noticias):
         try:
             pubdate = date.fromtimestamp(mktime(news["published_parsed"]))
-            if not (data_inicio <= pubdate <= data_fim):
-                continue
-                
             titulo = news.get("title", "")
             link = news.get("links", [{}])[0].get("href", "")
             
+            # 1. Validar Data
+            if not (data_inicio <= pubdate <= data_fim):
+                log_skip_date = f"   [SKIP] Notícia {idx+1}: '{titulo[:40]}...' fora do período ({pubdate})"
+                print(log_skip_date)
+                continue
+                
             titulo_sem_acento = remove_accents(titulo)
             
-            # Verificar correspondência das cidades do chunk no título
+            # 2. Verificar correspondência no título
             cidades_encontradas = []
             for cidade in chunk:
                 cidade_sem_acento = remove_accents(cidade)
@@ -170,27 +180,35 @@ def process_query_chunk(pesquisa, chunk, data_inicio, data_fim, noticias_maximo_
                 if re.search(pattern, titulo_sem_acento, re.IGNORECASE):
                     cidades_encontradas.append(cidade)
             
-            # Se não encontrou no título, decodifica a URL e extrai o texto do corpo da página
             decoded_url = ""
+            if cidades_encontradas:
+                log_title_match = f"   ⭐ [MATCH TÍTULO] Cidades {cidades_encontradas} encontradas no título: '{titulo[:50]}...'"
+                print(log_title_match)
+                if progress_callback:
+                    progress_callback(log_title_match)
+            
+            # 3. Se não encontrou no título, decodifica a URL e faz scraping do texto
             if not cidades_encontradas and link:
+                log_scraping_start = f"   [SCRAPE] Tentando extrair texto para: '{titulo[:40]}...'"
+                print(log_scraping_start)
+                
                 try:
                     res_dec = gnewsdecoder(link)
                     if res_dec.get("status"):
                         decoded_url = res_dec["decoded_url"]
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"      [DEBUG] Erro ao decodificar link: {e}")
                 
                 if not decoded_url:
                     decoded_url = link
                 
-                # Scraping moderno e rápido via trafilatura
                 texto_artigo = ""
                 try:
                     downloaded = trafilatura.fetch_url(decoded_url)
                     if downloaded:
                         texto_artigo = trafilatura.extract(downloaded) or ""
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f"      [DEBUG] Falha ao ler página: {e}")
                 
                 if texto_artigo:
                     texto_sem_acento = remove_accents(texto_artigo)
@@ -199,8 +217,18 @@ def process_query_chunk(pesquisa, chunk, data_inicio, data_fim, noticias_maximo_
                         pattern = rf"\b{re.escape(cidade_sem_acento)}\b"
                         if re.search(pattern, texto_sem_acento, re.IGNORECASE):
                             cidades_encontradas.append(cidade)
+                    
+                    if cidades_encontradas:
+                        log_body_match = f"   ⭐ [MATCH CORPO] Cidades {cidades_encontradas} encontradas no corpo do artigo de: '{titulo[:40]}...'"
+                        print(log_body_match)
+                        if progress_callback:
+                            progress_callback(log_body_match)
+                    else:
+                        print("      [DEBUG] Nenhuma das cidades do bloco foi localizada no texto do artigo.")
+                else:
+                    print("      [DEBUG] Corpo do texto vazio ou bloqueado pelo site de origem.")
             else:
-                # Mesmo que tenha encontrado no título, decodifica a URL para salvar a URL original limpa no Excel
+                # Se já encontrou no título, apenas decodifica a URL para salvar o link limpo no Excel
                 if link:
                     try:
                         res_dec = gnewsdecoder(link)
@@ -224,23 +252,15 @@ def process_query_chunk(pesquisa, chunk, data_inicio, data_fim, noticias_maximo_
                     titulo,
                     decoded_url
                 ])
-                log_match = f"   ✓ [MATCH] '{pesquisa}' em '{cidade}' -> {titulo[:50]}..."
-                print(log_match)
-                if progress_callback:
-                    progress_callback(log_match)
                     
         except Exception as e:
-            print(f"[DEBUG] Erro ao processar notícia individual: {e}")
+            print(f"   ⚠️ [ERRO NOTÍCIA] Falha ao processar item do feed: {e}")
             continue
             
     return resultados_chunk
 
 def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callback=None):
     print(f"\n[DEBUG] ============ INICIANDO EXECUÇÃO SIMPLIFICADA ============")
-    print(f"[DEBUG] Data início: {data_inicio} | Data fim: {data_fim}")
-    print(f"[DEBUG] Máx notícias por consulta: {noticias_maximo_retornado}")
-    print(f"[DEBUG] Total de termos de pesquisa: {len(lista_parametros_pesquisa)}")
-    print(f"[DEBUG] Total de municípios: {len(dados_municipios)}")
     
     if progress_callback:
         progress_callback("Iniciando execução...")
@@ -264,11 +284,15 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
     tamanho_bloco = 15
     blocos_cidades = list(chunk_list(lista_cidades, tamanho_bloco))
     
-    # Paralelização das consultas por termos e blocos de cidades
-    futures = []
-    # Usando no máximo 3 workers para evitar rate limit do Google RSS
-    max_workers = 3
+    # Fila de threads controlada: máximo 5 concorrentes por vez para evitar bloqueio e uso excessivo de recursos
+    max_workers = 5
     
+    log_threads = f"[SYSTEM] Inicializando Pool de Threads com max_workers={max_workers}..."
+    print(log_threads)
+    if progress_callback:
+        progress_callback(log_threads)
+        
+    futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         for termo in lista_parametros_pesquisa:
             for bloco in blocos_cidades:
@@ -284,12 +308,16 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
                 )
                 futures.append(future)
                 
+    # Coleta de resultados
     for idx, future in enumerate(concurrent.futures.as_completed(futures)):
         try:
             resultado = future.result()
             lista_formatada += resultado
         except Exception as e:
-            print(f"[ERROR] Falha ao coletar resultado da thread {idx}: {e}")
+            err_coll = f"   ❌ [ERRO POOL] Falha ao coletar resultado da thread {idx}: {e}"
+            print(err_coll)
+            if progress_callback:
+                progress_callback(err_coll)
             
     print(f"\n[DEBUG] Processamento finalizado. Total de correspondências: {len(lista_formatada)}")
     if progress_callback:
