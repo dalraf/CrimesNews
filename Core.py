@@ -295,7 +295,7 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
     blocos_cidades = list(chunk_list(lista_cidades, tamanho_bloco))
     
     # Fila de threads controlada: máximo 5 concorrentes por vez para evitar bloqueio e uso excessivo de recursos
-    max_workers = 10
+    max_workers = 50
     
     log_threads = f"[SYSTEM] Inicializando Pool de Threads com max_workers={max_workers}..."
     print(log_threads)
