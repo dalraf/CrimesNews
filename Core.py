@@ -99,9 +99,7 @@ def municipio_string_format(var):
 # Carregar dados iniciais das planilhas
 print("[DEBUG] Carregando termos de pesquisa...")
 try:
-    lista_parametros_pesquisa = list(
-        get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"]
-    )
+    lista_parametros_pesquisa = list(get_data_from_sheet(sheet_id, sheet_name_termos)["TERMOS"])[:2]
 except Exception as e:
     print(f"[ERROR] Não foi possível carregar os termos: {e}")
     lista_parametros_pesquisa = []
@@ -285,7 +283,7 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
     blocos_cidades = list(chunk_list(lista_cidades, tamanho_bloco))
     
     # Fila de threads controlada: máximo 5 concorrentes por vez para evitar bloqueio e uso excessivo de recursos
-    max_workers = 5
+    max_workers = 10
     
     log_threads = f"[SYSTEM] Inicializando Pool de Threads com max_workers={max_workers}..."
     print(log_threads)
