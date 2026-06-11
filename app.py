@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
+import queue
 import Core
 import io
 
@@ -113,20 +114,17 @@ with col3:
 st.markdown("### 🚀 Executar Monitoramento")
 
 if st.button("Iniciar Busca de Notícias", type="primary", use_container_width=True):
-    # Container para Logs em tempo real
-    st.markdown("#### 🪵 Logs de Processamento")
-    log_container = st.empty()
-    
-    logs_list = []
-    def log_callback(message):
-        logs_list.append(message)
-        # Exibe os últimos 10 logs de forma reversa ou inteira dentro do container
-        log_html = "<div style='background-color:#0f0f0f; color:#00FF00; font-family:monospace; padding:10px; border-radius:5px; height:250px; overflow-y:auto; font-size:12px; line-height:1.4;'>"
-        log_html += "".join([f"<div>{line}</div>" for line in logs_list])
-        log_html += "</div>"
-        log_container.markdown(log_html, unsafe_allow_html=True)
+    # Fila thread-safe: workers apenas fazem queue.put(msg).
+    # A thread principal drena a fila APÓS a execução terminar e renderiza
+    # os logs com segurança dentro do contexto da sessão Streamlit.
+    log_queue = queue.Queue()
 
-    # Executar scraping
+    def log_callback(message):
+        """Apenas enfileira a mensagem — nunca toca no Streamlit diretamente."""
+        log_queue.put(message)
+
+    # Executar scraping (bloqueante na thread principal do Streamlit)
+    st.markdown("#### 🪵 Logs de Processamento")
     with st.spinner("Buscando e classificando notícias..."):
         df_resultados = Core.executar(
             data_inicio=data_inicio,
@@ -134,9 +132,24 @@ if st.button("Iniciar Busca de Notícias", type="primary", use_container_width=T
             noticias_maximo_retornado=noticias_maximo_retornado,
             progress_callback=log_callback
         )
-        
+
+    # Drenar fila e renderizar logs — agora na thread da sessão Streamlit
+    logs_list = []
+    while not log_queue.empty():
+        logs_list.append(log_queue.get_nowait())
+
+    if logs_list:
+        log_html = (
+            "<div style='background-color:#0f0f0f; color:#00FF00; font-family:monospace; "
+            "padding:10px; border-radius:5px; max-height:350px; overflow-y:auto; "
+            "font-size:12px; line-height:1.6;'>"
+        )
+        log_html += "".join([f"<div>{line}</div>" for line in logs_list])
+        log_html += "</div>"
+        st.markdown(log_html, unsafe_allow_html=True)
+
     st.success(f"Busca finalizada! {len(df_resultados)} correspondências encontradas.")
-    
+
     if not df_resultados.empty:
         # Exibir Métricas de Resultados
         st.markdown("### 📈 Resumo das Notícias Encontradas")
@@ -155,13 +168,13 @@ if st.button("Iniciar Busca de Notícias", type="primary", use_container_width=T
         # Exibir Tabela de Resultados
         st.markdown("#### 📄 Tabela de Dados")
         st.dataframe(df_resultados, use_container_width=True)
-        
+
         # Gerar buffer em memória do Excel para download
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df_resultados.to_excel(writer, index=False, sheet_name='Crimes')
         buffer.seek(0)
-        
+
         st.download_button(
             label="Download Excel (crimes.xlsx)",
             data=buffer,
@@ -169,7 +182,7 @@ if st.button("Iniciar Busca de Notícias", type="primary", use_container_width=T
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
-        
+
         # Gráficos Dinâmicos
         st.markdown("### 📊 Gráficos Estatísticos")
         g1, g2 = st.columns(2)
@@ -179,6 +192,6 @@ if st.button("Iniciar Busca de Notícias", type="primary", use_container_width=T
         with g2:
             st.markdown("**Notícias por Regional**")
             st.bar_chart(df_resultados["Regional"].value_counts())
-            
+
     else:
         st.info("Nenhuma notícia foi encontrada para os critérios selecionados no período.")
