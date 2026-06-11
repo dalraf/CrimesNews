@@ -258,18 +258,29 @@ def process_query_chunk(pesquisa, chunk, data_inicio, data_fim, noticias_maximo_
             
     return resultados_chunk
 
-def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callback=None):
-    print(f"\n[DEBUG] ============ INICIANDO EXECUÇÃO SIMPLIFICADA ============")
-    
+def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callback=None,
+             termos_selecionados=None, municipios_df_override=None):
+    """
+    termos_selecionados: lista de strings opcional. Se None, usa lista_parametros_pesquisa global.
+    municipios_df_override: DataFrame opcional com colunas [Municipio, Regional, Departamento].
+                            Se None, usa dados_municipios global.
+    """
+    print(f"\n[DEBUG] ============ INICIANDO EXECUÇÃO ============")
+
+    # Resolve termos e municípios: usa override quando fornecido, senão usa o global
+    termos = termos_selecionados if termos_selecionados is not None else lista_parametros_pesquisa
+    df_municipios = municipios_df_override if municipios_df_override is not None else dados_municipios
+
     if progress_callback:
         progress_callback("Iniciando execução...")
         progress_callback(f"Período: {data_inicio} até {data_fim}")
-        progress_callback(f"Termos de Pesquisa: {', '.join(lista_parametros_pesquisa)}")
-    
+        progress_callback(f"Termos de Pesquisa ({len(termos)}): {', '.join(termos)}")
+        progress_callback(f"Municípios ativos: {len(df_municipios)}")
+
     # Criar dicionário de municípios para mapeamento O(1)
     municipios_dict = {}
     lista_cidades = []
-    for _, row in dados_municipios.iterrows():
+    for _, row in df_municipios.iterrows():
         municipio = row["Municipio"]
         lista_cidades.append(municipio)
         municipios_dict[municipio] = {
@@ -293,7 +304,7 @@ def executar(data_inicio, data_fim, noticias_maximo_retornado=10, progress_callb
         
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for termo in lista_parametros_pesquisa:
+        for termo in termos:
             for bloco in blocos_cidades:
                 future = executor.submit(
                     process_query_chunk,
