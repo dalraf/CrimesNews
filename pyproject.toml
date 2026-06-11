@@ -12,7 +12,9 @@ feedparser = "^6.0.10"
 gspread = "^5.7.1"
 beautifulsoup4 = "^4.11.1"
 openpyxl = "^3.0.10"
-spacy = "^3.5.0"
+googlenewsdecoder = "*"
+trafilatura = "*"
+streamlit = "*"
 
 
 [tool.poetry.group.dev.dependencies]
