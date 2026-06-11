@@ -109,35 +109,59 @@ dados_municipios["Municipio"] = dados_municipios["Municipio"].apply(
 
 def remove_tags(html):
     try:
+        print(f"[DEBUG]       Analisando HTML ({len(html)} bytes)...")
         try:
             soup_list = BeautifulSoup(html, "html.parser").find_all("main")
+            print(f"[DEBUG]       Tags <main> encontradas: {len(soup_list)}")
         except Exception as e:
-            print("Erro de busca da tag main: ", e.args[0])
+            print(f"[DEBUG]       Erro de busca da tag main: {e}")
             try:
                 soup_list = BeautifulSoup(html, "html.parser").find_all(
                     "div", class_=re.compile(r"main")
                 )
+                print(f"[DEBUG]       Tags <div class='main'> encontradas: {len(soup_list)}")
             except Exception as e:
-                print("Erro de busca do main class: ", e.args[0])
+                print(f"[DEBUG]       Erro de busca do main class: {e}")
+                soup_list = []
+        
         final_text = ""
         if soup_list:
+            print(f"[DEBUG]       Removendo tags de estilo e script...")
             for soup in soup_list:
                 for data in soup(["style", "script"]):
                     data.decompose()
             for soup in soup_list:
-                final_text += " ".join(soup.stripped_strings)
+                text = " ".join(soup.stripped_strings)
+                final_text += text
+                print(f"[DEBUG]       Texto extraído desta tag: {len(text)} caracteres")
+        else:
+            print(f"[DEBUG]       Nenhuma tag main/div encontrada. Tentando extrair todo o body...")
+            soup = BeautifulSoup(html, "html.parser")
+            body = soup.find("body")
+            if body:
+                for data in body(["style", "script", "nav", "header", "footer"]):
+                    data.decompose()
+                final_text = " ".join(body.stripped_strings)
+                print(f"[DEBUG]       Texto do body: {len(final_text)} caracteres")
+        
         return final_text
     except Exception as e:
-        print("Erro de análise de html: ", e.args[0])
+        print(f"[DEBUG]       ❌ ERRO de análise de html: {e}")
         return ""
 
 
 def get_text_url(url):
     try:
+        print(f"[DEBUG]     Requisição HTTP para: {url}")
         page = requests.get(url, verify=False, timeout=60)
-        return remove_tags(page.content)
+        print(f"[DEBUG]     Status code: {page.status_code}")
+        print(f"[DEBUG]     Tamanho da resposta: {len(page.content)} bytes")
+        
+        text = remove_tags(page.content)
+        print(f"[DEBUG]     Texto extraído: {len(text)} caracteres")
+        return text
     except Exception as e:
-        print("Erro de busca dos dados do site: ", e.args[0])
+        print(f"[DEBUG]     ❌ ERRO de busca dos dados do site: {e}")
         return ""
 
 
