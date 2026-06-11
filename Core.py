@@ -156,6 +156,16 @@ def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
     url = f"https://news.google.com/rss/search?q={pesquisa_url}&hl=pt-BR&gl=BR&ceid=BR%3Apt-419"
     noticias = feedparser.parse(url)["entries"][:noticias_maximo_retornado]
     lista_formatada = []
+    
+    # Criar dicionário para busca rápida de municípios (O(1) em vez de O(n))
+    municipios_dict = {}
+    for row in dados_municipios.iterrows():
+        municipio = row[1]["Municipio"]
+        municipios_dict[municipio] = {
+            "Regional": row[1]["Regional"],
+            "Departamento": row[1]["Departamento"]
+        }
+    
     for news in noticias:
         pubdate = date.fromtimestamp(mktime(news["published_parsed"]))
         if pubdate >= data_inicio and pubdate <= data_fim:
@@ -163,15 +173,18 @@ def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
             link = news["links"][0]["href"]
             link_text = get_text_url(link)
             doc_link_text = nlp(link_text)
-            list_ent_gpe = []
+            
+            # Usar set para busca O(1) em vez de lista
+            list_ent_gpe = set()
             for ent in doc_link_text.ents:
                 if ent.label_ in ("LOC", "GPE"):
-                    list_ent_gpe.append(ent.text)
-            for row in dados_municipios.iterrows():
-                municipio = row[1]["Municipio"]
-                if municipio in list_ent_gpe:
-                    regional = row[1]["Regional"]
-                    departamento = row[1]["Departamento"]
+                    list_ent_gpe.add(ent.text)
+            
+            # Buscar apenas os municípios encontrados (muito mais rápido)
+            for municipio in list_ent_gpe:
+                if municipio in municipios_dict:
+                    regional = municipios_dict[municipio]["Regional"]
+                    departamento = municipios_dict[municipio]["Departamento"]
                     lista_formatada.append(
                         [
                             pubdate,
