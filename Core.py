@@ -153,13 +153,40 @@ def remove_tags(html):
 def get_text_url(url):
     try:
         print(f"[DEBUG]     Requisição HTTP para: {url}")
-        page = requests.get(url, verify=False, timeout=60)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        # Tentar com redirect automático
+        page = requests.get(url, verify=False, timeout=60, headers=headers, allow_redirects=True)
         print(f"[DEBUG]     Status code: {page.status_code}")
+        print(f"[DEBUG]     URL final (após redirects): {page.url}")
         print(f"[DEBUG]     Tamanho da resposta: {len(page.content)} bytes")
+        
+        if page.status_code == 400:
+            print(f"[DEBUG]     ⚠️ Erro 400: URL pode estar expirada ou mal formatada")
+            # Tentar decodificar a URL do Google News
+            try:
+                # Extrair o newsarticle ID e tentar acessar diretamente
+                if "CBMi" in url:
+                    print(f"[DEBUG]     Tentando extrair conteúdo do ID do artigo...")
+            except:
+                pass
+            return ""
+        
+        if page.status_code != 200:
+            print(f"[DEBUG]     ⚠️ Status code {page.status_code}")
+            return ""
         
         text = remove_tags(page.content)
         print(f"[DEBUG]     Texto extraído: {len(text)} caracteres")
         return text
+    except requests.exceptions.Timeout:
+        print(f"[DEBUG]     ❌ ERRO: Timeout (60s) - servidor não respondeu a tempo")
+        return ""
+    except requests.exceptions.ConnectionError as e:
+        print(f"[DEBUG]     ❌ ERRO de conexão: {e}")
+        return ""
     except Exception as e:
         print(f"[DEBUG]     ❌ ERRO de busca dos dados do site: {e}")
         return ""
@@ -207,8 +234,18 @@ def format_news(pesquisa, data_inicio, data_fim, noticias_maximo_retornado):
                 print(f"[DEBUG]   Título: {titulo[:60]}...")
                 
                 link = news["links"][0]["href"]
-                print(f"[DEBUG]   Extraindo texto do link: {link[:80]}...")
+                print(f"[DEBUG]   Link bruto do RSS: {link}")
+                
+                # Verificar se é URL do Google News e tentar extrair URL real
+                if "news.google.com" in link:
+                    print(f"[DEBUG]   ⚠️ URL é do Google News (intermediária)")
+                
+                print(f"[DEBUG]   Extraindo texto do link...")
                 link_text = get_text_url(link)
+                
+                if not link_text:
+                    print(f"[DEBUG]   ⚠️ Nenhum texto extraído, pulando esta notícia")
+                    continue
                 print(f"[DEBUG]   Texto extraído: {len(link_text)} caracteres")
                 
                 print(f"[DEBUG]   Processando com NLP (spacy)...")
