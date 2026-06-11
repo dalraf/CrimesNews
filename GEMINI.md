@@ -37,6 +37,7 @@ graph TD
 * **`app.py`**: Nova interface web interativa desenvolvida em **Streamlit**. Substitui a antiga interface Tkinter e permite ver o progresso das tarefas em tempo real, tabelas interativas e gráficos estatísticos.
 * **`CrimesNews-Cli.py`**: CLI padrão para execução rápida via terminal.
 * **`Dockerfile`**: Configuração dockerizada configurada para inicializar o Streamlit na porta 8080.
+* **`docker-compose.yml`**: Orquestração simplificada para rodar a aplicação em containers com suporte a hot-reload.
 * **`pyproject.toml`** / **`poetry.lock`**: Dependências do projeto gerenciadas via Poetry.
 
 ---
@@ -53,7 +54,22 @@ graph TD
 
 ## 🚀 Como Executar
 
-### Pré-requisitos
+### Opção 1: Usando Docker e Docker Compose (Recomendado)
+
+Certifique-se de ter o Docker e Docker Compose instalados em sua máquina.
+
+1. **Subir o container da aplicação:**
+   ```bash
+   docker compose up --build
+   ```
+
+2. **Acessar o Streamlit**:
+   Abra seu navegador no endereço: [http://localhost:8080](http://localhost:8080).
+
+---
+
+### Opção 2: Execução Local Nativa
+
 Certifique-se de ter o Python 3.9+ e o [Poetry](https://python-poetry.org/) instalados.
 
 1. **Instalar Dependências:**
